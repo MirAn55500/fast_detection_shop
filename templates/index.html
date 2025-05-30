@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Object Detection Service</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .upload-container {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+            background-color: #f9f9f9;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .file-input {
+            display: none;
+        }
+        .file-label {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .file-name {
+            margin-top: 10px;
+            font-style: italic;
+        }
+        button {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 15px;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>Object Detection Service</h1>
+    
+    <div class="upload-container">
+        <h2>Upload Video for Processing</h2>
+        <form id="upload-form" action="/process" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="model-type">Select Model Type:</label>
+                <select id="model-type" name="model_type" required>
+                    <option value="standard">Standard Model (Person Detection Only)</option>
+                    <option value="custom">Custom Model (Person, Pallet, Dome Detection)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <input type="file" id="file-input" name="file" class="file-input" accept="video/*" required>
+                <label for="file-input" class="file-label">Choose Video File</label>
+                <div id="file-name" class="file-name">No file selected</div>
+            </div>
+            
+            <button type="submit" id="submit-btn">Process Video</button>
+        </form>
+    </div>
+    
+    <div id="loading" class="loading">
+        <p>Processing video. This may take several minutes depending on the video length...</p>
+        <div class="spinner"></div>
+    </div>
+    
+    <script>
+        document.getElementById('file-input').addEventListener('change', function(e) {
+            const fileName = e.target.files[0] ? e.target.files[0].name : 'No file selected';
+            document.getElementById('file-name').textContent = fileName;
+            document.getElementById('submit-btn').disabled = !e.target.files[0];
+        });
+        
+        document.getElementById('upload-form').addEventListener('submit', function() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('submit-btn').disabled = true;
+        });
+    </script>
+</body>
+</html> 

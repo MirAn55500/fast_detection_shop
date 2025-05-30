@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Временные файлы
+*.log
+*.tmp
+.DS_Store
+
+# Загруженные видео и результаты
+static/uploads/*
+static/event_frames/*
+static/detection_video.mp4
+static/detection_video.avi
+static/temp_detection_video.mp4
+static/temp_detection_video.avi
+
+# Сохраняем структуру директорий
+!static/uploads/.gitkeep
+!static/event_frames/.gitkeep
+
+# Результаты работы приложения
+detection_results.xlsx
+
+# Модели YOLOv4 (большие файлы)
+models/*.weights
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo 

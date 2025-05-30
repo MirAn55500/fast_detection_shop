@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Detection Results</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .video-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        .video-player {
+            width: 48%;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 768px) {
+            .video-player {
+                width: 100%;
+            }
+        }
+        .video-player video {
+            width: 100%;
+            max-height: 400px;
+            background-color: #000;
+        }
+        .video-error {
+            color: #d32f2f;
+            font-style: italic;
+            margin-top: 10px;
+        }
+        .video-info {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        .video-controls {
+            margin-top: 10px;
+        }
+        .video-reload-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .stats-container {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .stats-item {
+            display: inline-block;
+            margin-right: 20px;
+            background-color: #e9e9e9;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .results-table th, .results-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        .results-table th {
+            background-color: #f2f2f2;
+        }
+        .results-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .results-table img {
+            max-height: 100px;
+            max-width: 150px;
+            cursor: pointer;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+        }
+        .modal-content {
+            display: block;
+            position: relative;
+            margin: auto;
+            max-width: 80%;
+            max-height: 80%;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .back-button {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .no-results {
+            text-align: center;
+            padding: 50px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Object Detection Results</h1>
+    </div>
+
+    <div class="video-container">
+        {% if video_path %}
+        <div class="video-player">
+            <h3>Original Video</h3>
+            <video controls id="original-video">
+                <source src="{{ video_path }}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <div class="video-info">
+                Original uploaded video
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if detection_video %}
+        <div class="video-player">
+            <h3>Detection Video</h3>
+            <video controls id="detection-video" preload="auto">
+                <source src="{{ detection_video }}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <div class="video-error" id="detection-video-error" style="display: none;">
+                Error loading detection video. Please try the reload button below.
+            </div>
+            <div class="video-controls">
+                <button class="video-reload-btn" id="reload-video-btn">Reload Video</button>
+            </div>
+            <div class="video-info">
+                Video with detection boxes (processed with YOLO)
+            </div>
+        </div>
+        {% else %}
+        <div class="video-player">
+            <h3>Detection Video</h3>
+            <div class="video-error">
+                {% if message %}
+                    {{ message }}
+                {% else %}
+                    Detection video not available.
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <h2>Detection Statistics</h2>
+    <div class="stats-container">
+        {% if stats %}
+            {% for event_type, count in stats.items() %}
+                <div class="stats-item">{{ event_type }}: {{ count }}</div>
+            {% endfor %}
+        {% else %}
+            <p>No detections found.</p>
+        {% endif %}
+    </div>
+
+    <h2>Detailed Results</h2>
+    {% if results %}
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Event Type</th>
+                    <th>Class</th>
+                    <th>Confidence</th>
+                    <th>Image</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in results %}
+                <tr>
+                    <td>{{ result.timestamp }}</td>
+                    <td>{{ result.event_type }}</td>
+                    <td>{{ result.class }}</td>
+                    <td>{{ "%.2f"|format(result.confidence) }}</td>
+                    <td><img src="{{ result.image_path }}" class="detection-image" onclick="showImage(this.src)"></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="no-results">
+            <h3>No detections found</h3>
+            <p>The video was processed, but no objects of interest were detected.</p>
+        </div>
+    {% endif %}
+
+    <a href="/" class="back-button">Process Another Video</a>
+
+    <!-- Modal for displaying images -->
+    <div id="imageModal" class="modal">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <script>
+        // Image modal functionality
+        function showImage(src) {
+            var modal = document.getElementById("imageModal");
+            var modalImg = document.getElementById("modalImage");
+            modal.style.display = "block";
+            modalImg.src = src;
+        }
+        
+        function closeModal() {
+            document.getElementById("imageModal").style.display = "none";
+        }
+        
+        // Close modal when clicking outside the image
+        window.onclick = function(event) {
+            var modal = document.getElementById("imageModal");
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+        
+        // Video handling functions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Обработка видео с детекцией
+            var detectionVideo = document.getElementById('detection-video');
+            var reloadBtn = document.getElementById('reload-video-btn');
+            var errorDiv = document.getElementById('detection-video-error');
+            var loadAttempts = 0;
+            var maxLoadAttempts = 5;
+            
+            function reloadVideo() {
+                if (loadAttempts >= maxLoadAttempts) {
+                    console.error('Maximum reload attempts reached. Please use the manual reload button.');
+                    errorDiv.textContent = 'Не удалось автоматически загрузить видео. Пожалуйста, используйте кнопку перезагрузки.';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+                
+                loadAttempts++;
+                
+                try {
+                    var currentSrc = detectionVideo.querySelector('source').src;
+                    // Удаляем предыдущий timestamp, если он есть
+                    var baseUrl = currentSrc.split('?')[0];
+                    // Добавляем новый timestamp для предотвращения кэширования
+                    var newSrc = baseUrl + '?t=' + new Date().getTime();
+                    
+                    // Обновляем источник и перезагружаем видео
+                    detectionVideo.querySelector('source').src = newSrc;
+                    detectionVideo.load();
+                    
+                    console.log(`Video reload attempt ${loadAttempts} with source: ${newSrc}`);
+                    
+                    // Пробуем воспроизвести видео после загрузки
+                    detectionVideo.onloadeddata = function() {
+                        console.log('Video loaded successfully');
+                        errorDiv.style.display = 'none';
+                    };
+                    
+                } catch (e) {
+                    console.error('Error reloading video:', e);
+                    errorDiv.style.display = 'block';
+                }
+            }
+            
+            if (detectionVideo) {
+                // Обработка ошибок загрузки видео
+                detectionVideo.addEventListener('error', function(e) {
+                    console.error('Error loading detection video:', e);
+                    errorDiv.style.display = 'block';
+                    
+                    // Автоматическая попытка перезагрузки через 2 секунды
+                    setTimeout(reloadVideo, 2000);
+                });
+                
+                // Проверка доступности видео
+                fetch('{{ detection_video }}')
+                    .then(response => {
+                        if (!response.ok) {
+                            console.error('Video file not accessible:', response.status);
+                            errorDiv.textContent = `Файл видео недоступен (статус: ${response.status}). Используйте кнопку перезагрузки.`;
+                            errorDiv.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking video file:', error);
+                    });
+                
+                // Принудительная загрузка видео после небольшой задержки
+                setTimeout(reloadVideo, 1000);
+                
+                // Кнопка для ручной перезагрузки видео
+                if (reloadBtn) {
+                    reloadBtn.addEventListener('click', function() {
+                        // Сбрасываем счетчик попыток при ручной перезагрузке
+                        loadAttempts = 0;
+                        reloadVideo();
+                        // Скрываем сообщение об ошибке при ручной перезагрузке
+                        errorDiv.style.display = 'none';
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html> 

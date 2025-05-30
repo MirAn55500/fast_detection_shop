@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Processing Video</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2 {
+            color: #333;
+            text-align: center;
+        }
+        .processing-container {
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            background-color: #f9f9f9;
+            text-align: center;
+        }
+        .progress-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            margin: 20px 0;
+            position: relative;
+        }
+        .progress-bar {
+            height: 30px;
+            background-color: #4CAF50;
+            border-radius: 5px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+        }
+        .status-message {
+            margin: 20px 0;
+            font-style: italic;
+        }
+        .file-info {
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .loading-spinner {
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .hidden {
+            display: none;
+        }
+        .video-status {
+            font-size: 14px;
+            color: #666;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Processing Your Video</h1>
+    
+    <div class="processing-container">
+        <div class="file-info">
+            Processing: <span id="filename">{{ file_name }}</span>
+        </div>
+        
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+            <div class="progress-text" id="progress-text">0%</div>
+        </div>
+        
+        <div class="status-message" id="status-message">Starting processing...</div>
+        
+        <div class="loading-spinner" id="loading-spinner"></div>
+        
+        <div id="completion-message" class="hidden">
+            <h2>Processing Complete!</h2>
+            <p>Preparing video for viewing...</p>
+            <div class="video-status" id="video-status">Waiting for video to be ready...</div>
+        </div>
+        
+        <div id="error-message" class="hidden">
+            <h2>Error Processing Video</h2>
+            <p id="error-details">An error occurred while processing the video.</p>
+            <a href="/" style="color: #4CAF50; text-decoration: none;">Return to Upload Page</a>
+        </div>
+    </div>
+    
+    <script>
+        const taskId = "{{ task_id }}";
+        let checkInterval;
+        let videoCheckInterval;
+        
+        // Function to update progress
+        function updateProgress() {
+            fetch(`/progress/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Update progress bar
+                    const progressBar = document.getElementById('progress-bar');
+                    const progressText = document.getElementById('progress-text');
+                    const statusMessage = document.getElementById('status-message');
+                    
+                    // Set progress bar width
+                    progressBar.style.width = `${data.progress}%`;
+                    progressText.textContent = `${data.progress}%`;
+                    
+                    // Update status message
+                    if (data.message) {
+                        statusMessage.textContent = data.message;
+                    }
+                    
+                    // Check if complete
+                    if (data.status === 'complete') {
+                        document.getElementById('loading-spinner').classList.add('hidden');
+                        document.getElementById('completion-message').classList.remove('hidden');
+                        clearInterval(checkInterval);
+                        
+                        // Начинаем проверять готовность видео
+                        checkVideoReady();
+                    }
+                    
+                    // Check if error
+                    if (data.status === 'error') {
+                        document.getElementById('loading-spinner').classList.add('hidden');
+                        document.getElementById('error-message').classList.remove('hidden');
+                        document.getElementById('error-details').textContent = data.message;
+                        clearInterval(checkInterval);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching progress:', error);
+                });
+        }
+        
+        // Функция для проверки готовности видео
+        function checkVideoReady() {
+            const statusElement = document.getElementById('video-status');
+            statusElement.textContent = "Checking video status...";
+            
+            // Начинаем периодически проверять готовность видео
+            videoCheckInterval = setInterval(() => {
+                fetch(`/wait-for-video/${taskId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.ready) {
+                            statusElement.textContent = "Video ready! Redirecting...";
+                            clearInterval(videoCheckInterval);
+                            
+                            // Добавляем случайный параметр к URL, чтобы избежать кэширования
+                            const timestamp = new Date().getTime();
+                            window.location.href = `/results/${taskId}?t=${timestamp}`;
+                        } else {
+                            // Показываем больше информации о статусе
+                            let statusText = `Preparing video (${Math.round(data.elapsed)}s)...`;
+                            if (data.has_video) {
+                                statusText += ` Video file found (${Math.round(data.video_size/1024)} KB).`;
+                            } else if (data.elapsed > 10) {
+                                // Если прошло более 10 секунд и видео все еще нет
+                                statusText += " Waiting for video file to be created...";
+                            }
+                            statusElement.textContent = statusText;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking video status:', error);
+                        statusElement.textContent = "Error checking video status. Please wait...";
+                    });
+            }, 1000);
+        }
+        
+        // Start checking progress
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initial check
+            updateProgress();
+            
+            // Set interval for checking (every 1 second)
+            checkInterval = setInterval(updateProgress, 1000);
+        });
+    </script>
+</body>
+</html> 
