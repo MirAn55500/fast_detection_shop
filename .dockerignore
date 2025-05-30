@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Project specific
+models/*.weights
+static/uploads/*
+static/event_frames/*
+event_frames/*
+*.mp4
+*.avi
+detection_results.xlsx
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml 

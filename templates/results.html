@@ -55,7 +55,7 @@
         .video-controls {
             margin-top: 10px;
         }
-        .video-reload-btn {
+        .video-reload-btn, .video-btn {
             background-color: #2196F3;
             color: white;
             border: none;
@@ -63,6 +63,22 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+        .seek-container {
+            display: flex;
+            align-items: center;
+            margin-top: 5px;
+        }
+        .seek-slider {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+        .time-display {
+            font-size: 14px;
+            color: #666;
+            min-width: 80px;
         }
         .stats-container {
             background-color: #f5f5f5;
@@ -158,6 +174,14 @@
                 <source src="{{ video_path }}" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
+            <div class="video-controls custom-controls">
+                <button class="video-btn" data-video="original-video" data-action="rewind">⏪ -10s</button>
+                <button class="video-btn" data-video="original-video" data-action="forward">+10s ⏩</button>
+                <div class="seek-container">
+                    <input type="range" class="seek-slider" data-video="original-video" min="0" value="0" step="1">
+                    <span class="time-display" id="original-video-time">0:00 / 0:00</span>
+                </div>
+            </div>
             <div class="video-info">
                 Original uploaded video
             </div>
@@ -176,6 +200,12 @@
             </div>
             <div class="video-controls">
                 <button class="video-reload-btn" id="reload-video-btn">Reload Video</button>
+                <button class="video-btn" data-video="detection-video" data-action="rewind">⏪ -10s</button>
+                <button class="video-btn" data-video="detection-video" data-action="forward">+10s ⏩</button>
+                <div class="seek-container">
+                    <input type="range" class="seek-slider" data-video="detection-video" min="0" value="0" step="1">
+                    <span class="time-display" id="detection-video-time">0:00 / 0:00</span>
+                </div>
             </div>
             <div class="video-info">
                 Video with detection boxes (processed with YOLO)
@@ -270,10 +300,73 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Обработка видео с детекцией
             var detectionVideo = document.getElementById('detection-video');
+            var originalVideo = document.getElementById('original-video');
             var reloadBtn = document.getElementById('reload-video-btn');
             var errorDiv = document.getElementById('detection-video-error');
             var loadAttempts = 0;
             var maxLoadAttempts = 5;
+            
+            // Video navigation controls
+            function setupVideoControls() {
+                // Setup for all videos
+                document.querySelectorAll('.video-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const videoId = this.getAttribute('data-video');
+                        const action = this.getAttribute('data-action');
+                        const video = document.getElementById(videoId);
+                        
+                        if (video) {
+                            if (action === 'forward') {
+                                video.currentTime = Math.min(video.currentTime + 10, video.duration);
+                            } else if (action === 'rewind') {
+                                video.currentTime = Math.max(video.currentTime - 10, 0);
+                            }
+                        }
+                    });
+                });
+                
+                // Setup seek sliders
+                document.querySelectorAll('.seek-slider').forEach(slider => {
+                    const videoId = slider.getAttribute('data-video');
+                    const video = document.getElementById(videoId);
+                    const timeDisplay = document.getElementById(videoId + '-time');
+                    
+                    if (video && timeDisplay) {
+                        // Update slider max value when video metadata is loaded
+                        video.addEventListener('loadedmetadata', function() {
+                            slider.max = Math.floor(video.duration);
+                            updateTimeDisplay(video, timeDisplay);
+                        });
+                        
+                        // Update slider position during playback
+                        video.addEventListener('timeupdate', function() {
+                            slider.value = Math.floor(video.currentTime);
+                            updateTimeDisplay(video, timeDisplay);
+                        });
+                        
+                        // Allow seeking when slider is moved
+                        slider.addEventListener('input', function() {
+                            video.currentTime = slider.value;
+                        });
+                    }
+                });
+            }
+            
+            // Format time for display (MM:SS)
+            function formatTime(seconds) {
+                const minutes = Math.floor(seconds / 60);
+                seconds = Math.floor(seconds % 60);
+                return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+            }
+            
+            // Update time display
+            function updateTimeDisplay(video, display) {
+                if (video && display) {
+                    const current = formatTime(video.currentTime);
+                    const duration = formatTime(video.duration || 0);
+                    display.textContent = current + ' / ' + duration;
+                }
+            }
             
             function reloadVideo() {
                 if (loadAttempts >= maxLoadAttempts) {
@@ -347,6 +440,9 @@
                     });
                 }
             }
+            
+            // Initialize video controls
+            setupVideoControls();
         });
     </script>
 </body>
